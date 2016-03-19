@@ -9,7 +9,7 @@ function [ ImMag, ImDir ] = EdgeOperator( Im, type )
           -2, -3, 0, 3, 2; -1, -2, 0, 2, 1];
     if isequal( type, 'sobel3' )
         del( :, :, 1 ) = double( s3' );
-        del( :, :, 2 ) = double( s3 ); % negative M dir... why not xy
+        del( :, :, 2 ) = double( s3 ); 
     end
     if isequal( type, 'sobel5' )
         del( :, :, 1 ) = double( s5' );
