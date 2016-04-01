@@ -1,4 +1,4 @@
-function [ OutMag, OutDir ] = DirExpansion( InOfMag, InOfDir )
+function [ OutMag, OutDir ] = DirExpansion( InOfMag, InOfDir, V )
 %DirExpansion Expansion using directional operator, expanding in a
 %direction only
 %   Not Perfect, very stylized, but it works exactly right
@@ -26,10 +26,13 @@ function [ OutMag, OutDir ] = DirExpansion( InOfMag, InOfDir )
     border = ~seen .* pointed .* conv2( double( seen ), ones(3, 'single' ), 'same' );
     newMagVals(:,:) = logical(border(:,:)) .* conv2( OutMag(:,:), ones(3), 'same') ./border(:,:);
     newMagVals( isnan(newMagVals)) = 0;
+    OutMag = uint8( OutMag + newMagVals );
+    if V == 1;
     newDirVals(:,:) = logical(border(:,:)) .* conv2( OutDir(:,:), ones(3), 'same') /9;
     newDirVals( isnan(newDirVals)) = 0; 
-    OutMag = uint8( OutMag + newMagVals );
     OutDir = int16( ( OutDir .* ~logical(newMagVals) ) + newDirVals ); 
+    else OutDir = int16( OutDir ); 
+    end;
 end
 
 function [NextM, NextN, NegNextM, NegNextN] = NextInDir ( DirMN, m, n )
