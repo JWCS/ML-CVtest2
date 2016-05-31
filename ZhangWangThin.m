@@ -1,7 +1,6 @@
 function [ OutMag ] = ZhangWangThin( InOfMag, isIterative )
 %ZHANGWANGTHIN A thinning / skeletization algorithm by YY Zhang and PSP
-%Wang; input is matrix to thin, output is same, uint8; Preserves magnitude
-tic
+%Wang; input is matrix to thin, output is same, uint8; Assume binary uint8
 seen = logical( InOfMag );
 toDelete = ones( size( seen ) );
 while( sum(sum(toDelete, 1), 2) ~=0 )
@@ -14,25 +13,15 @@ while( sum(sum(toDelete, 1), 2) ~=0 )
     toDelete = localOperations( seen, NeighborNo);
     if isIterative
         [ M, N ] = size( toDelete );
-        for m=1:M
-            for n=1:N
-                if (toDelete( m, n ) == 1) && m~=M && n~=N && m~=1
-                    toDelete( m+1, n )=0; toDelete( m+1, n+1 )=0;
-                    toDelete( m, n+1 )=0; toDelete( m-1, n+1 )=0;
-                end
-                if m==M && (toDelete( m, n ) ==1) && n~=N
-                    toDelete( m, n+1 )=0; toDelete( m-1, n+1 )=0;
-                end
-                if n==N && m~=M && (toDelete( m, n ) ==1)
-                    toDelete( m+1, n )=0;
-                end
-            end
+        for i = 1:(M*N-M-1)
+             if toDelete( i );
+                toDelete([ i+1, i+1+M, i+M, i-1+M ]) = 0; 
+             end
         end
     end
     seen = seen - toDelete;
 end
-OutMag = InOfMag .* cast(seen, 'like', InOfMag );
-toc
+OutMag = InOfMag .* uint8(seen)*255;
 end
 
 function toDelete = localOperations( logMat, validPoints ) 

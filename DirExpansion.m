@@ -1,43 +1,42 @@
-function [ OutMag, OutDir ] = DirExpansion( InOfMag, InOfDir, V )
-%DirExpansion Expansion using directional operator, expanding in a
-%direction only
-%   Not Perfect, very stylized, but it works exactly right
-    OutMag = single( InOfMag ); OutDir = single( InOfDir ); %2d matrices
-    seen = logical( OutMag ); newMagVals = zeros( size( OutMag ), 'single' );
-    newDirVals = zeros( size( OutDir ), 'single' ); pointed = zeros( size( seen ));
-    [ M, N ] = size( pointed ); 
-    %[arry(1,:),arry(2,:)] = NextInDir( OutDir(1:M,1:N), 1:M, 1:N );
-    %pointed(arry(1,:),arry(2,:)) = 1;
-    %pointed( NextI nDir( OutDir(1:M,1:N)) ) = 1;
-    %pointed(:,:) = logical( border(:,:) ) .* NextInDir( OutDir(:,:) );
-    for m = 1:M
-        for n = 1:N
-            if seen( m, n )
-                [ m2, n2, m3, n3 ] = NextInDir( OutDir( m, n ), m, n );
-                if ~( (m2-m)==0 && (n2-n)==0 ) && m2<=M && m2>=1 && n2<=N && n2>=1;
-                    pointed( m2, n2 ) = 1;
-                end
-                if ~( (m3-m)==0 && (n3-n)==0 ) && m3<=M && m3>=1 && n3<=N && n3>=1;
-                    pointed( m3, n3 ) = 1;
-                end
-            end
-        end
-    end    
-    border = ~seen .* pointed .* conv2( double( seen ), ones(3, 'single' ), 'same' );
-    newMagVals(:,:) = logical(border(:,:)) .* conv2( OutMag(:,:), ones(3), 'same') ./border(:,:);
-    newMagVals( isnan(newMagVals)) = 0;
-    OutMag = uint8( OutMag + newMagVals );
-    if V == 1;
-    newDirVals(:,:) = logical(border(:,:)) .* conv2( OutDir(:,:), ones(3), 'same') /9;
-    newDirVals( isnan(newDirVals)) = 0; 
-    OutDir = int16( ( OutDir .* ~logical(newMagVals) ) + newDirVals ); 
-    else OutDir = int16( OutDir ); 
-    end;
+function [ OutMag ] = DirExpansion( InOfMag, InOfDir, IncludePointsBool )
+%DirExpansion Expansion using the base original direction matrix. Assumes 
+%binary uint8. Given a point or end, will chain search in the direction 
+%given. OnlyEndsBool is true to only search off ends, false to also include 
+%isolated points
+tic
+seen = logical( InOfMag ); [M, N] = size(seen); NewPoints=zeros(size(seen));
+%NoOfWildChains = 4; %This is a precaution against an endless chain, or 10
+neighbors = ones( 3, 'single' ); %Do not include neighbors(2,2)=0;
+NeighborNo = conv2( single( seen ), neighbors, 'same').*single(seen);
+valInd = find( (NeighborNo==2) + (IncludePointsBool&(NeighborNo==1)) );%of ValPoints
+NewValInd = NextInDir( valInd, InOfDir( valInd ), seen, M, N );
+NewPoints( NewValInd ) = 1; 
+NewSeen = seen | NewPoints;
+toc
+while( size(NewValInd, 1) ~=0)%> NoOfWildChains )
+    NeighborNo = conv2( single( NewSeen ), neighbors, 'same').*single(NewSeen);
+    valInd = find( (NeighborNo==2) );%All iso points now would be lines
+    NewValInd = NextInDir( valInd, InOfDir( valInd ), NewSeen, M, N );
+    NewPoints( NewValInd ) = 1;
+    NewSeen = NewSeen | NewPoints; disp(size(NewValInd, 1));
+    toc
+end
+OutMag = uint8(NewSeen)*255; 
+toc
 end
 
-function [NextM, NextN, NegNextM, NegNextN] = NextInDir ( DirMN, m, n )
-%NextInDir function has input of DirMN at indice M,N & returns indices
-%NextM and NextN of where the next point in Dir is
-    a = round( sind( DirMN ) ); b = round( cosd( DirMN ) );
-    NextM = a + m; NegNextM = -a + m; NextN = b + n; NegNextN = -b + n; 
+function [newIndexVals] = NextInDir ( valInd, DirInd, Mat, Rows, Cols )
+%NextInDir Given input of indeces, and the direction each points to, give
+%new indeces to check, that are pointed to
+%NextM and NextN of where the next point in Dir is; y=n right, x=m down
+N=zeros(size(DirInd)); M=zeros(size(DirInd));
+N( abs(DirInd)>=135-15 ) = -1; N( abs(DirInd)<=45+15 ) = 1; %Horizontal,increased defs by 15
+M( (abs(DirInd)>=45) & (abs(DirInd)<=135) ) = -1;     %Vertical
+M( (DirInd<0) & (M==1) ) = 1;
+newIndexVals = int16( valInd + M + N*Rows );
+newIndexVals( (newIndexVals>Rows*Cols) | (newIndexVals<1) ) = [];
+newIndexVals( Mat(newIndexVals) == 1) = [];
 end
+%Loosened defs on N, check sols for diagnal increasing. This sometimes
+%doesn't catch the obvious +1 pixel soln, end expansion would help after
+%this, but after there's many spurs, eh. 
