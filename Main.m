@@ -5,17 +5,14 @@ Error = true;
 while Error
 Error = false; %This is for threshold: if too low, out of memory error
 filterRegSide = 5; % Apparently can only be 3||5, memory
-Im = rot90( imread('OnRed.JPG'), -2 );
-%Im = rot90( imread('H1.JPG'), -1 ); %Nature of the im, it's rotated (to me)
+Im = rot90( imread('H1.JPG'), -1 ); %Nature of the im, it's rotated (to me)
 Im2 = MedianFilter( Im, filterRegSide ); 
 [ImMag, ImDir] = EdgeOperator( Im2, 'sobel5' ); %Implement "names"
 %ImMag is the matrix which holds valid points and is operated on. ImDir is
 %a constant matrix, based off of original data, for reference
 ImMag( ImMag < threshold ) = 0; %Points not removed from ImDir, more data
 %At this point, useless to continue to hold magnitude vals. Convert to BW
-%toc;
 Im3 = ZhangWangThin( logical( ImMag ), false, false );
-%tic;
 %Expansion & thinning, This section can benefit from improvements
 for i = 1: 4
     j=0;
