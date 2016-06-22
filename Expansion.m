@@ -1,9 +1,8 @@
 function [ OutMag ] = Expansion( InOfMag )
-%Expansion Expands all points in 8-connnectivity, for a binary image,
-%assume uint8 standard data store
+%Expansion Expands all points in 8-connnectivity. Buffer is 'ones' 
 seen = logical( InOfMag );
-border = ~seen .* conv2( single( seen ), ones(3, 'single' ), 'same' );
-OutMag = InOfMag + uint8(border)*255;
+border = ~seen & conv2( single( seen ), ones(3, 'single' ), 'same' );
+OutMag = InOfMag; OutMag( border ) = 1;
 %This is older code when I retained and expanded the magnitudes. 
 %   Except for some painful dual for loops, this gives each new surrounding
 %   element a value of the average of the ones around it. 

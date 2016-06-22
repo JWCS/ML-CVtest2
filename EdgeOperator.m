@@ -36,6 +36,6 @@ function [ ImMag, ImDir ] = EdgeOperator( Im, type )
     Im3(:,:,:) = sqrt( sum( Im2.^2, 3 ) ); %Dim 3 is now RGB
     ImMag(:,:) = uint8( 255/4040 * 5/3 * sum( Im3, 3) );
     %For dir: Turn RGB into intensity (dels), then dels into degrees
-    Im4(:,:,:) = atan2( Im2(:,:, 2, :), Im2(:,:, 1, :) );
-    ImDir(:,:) = int16( 60 / pi * sum( Im4(:,:,:), 3 ) ); %180/3 (mean)
+    Im4(:,:,:) = atan2d( Im2(:,:, 2, :), Im2(:,:, 1, :) );
+    ImDir(:,:) = int16( sum( Im4(:,:,:), 3 ) / 3 ); % /3 for (mean)
 end
