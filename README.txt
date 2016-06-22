@@ -2,6 +2,7 @@ CV Trial 2 in Matlab, by JWC Sauve.
 
 The code in Main is shown below. It makes usage of the following functions (chronologically): MedianFilter, EdgeOperator(Sobel3/5), Expansion, ZhangWangThin, and Line.  
 The names are generally explanatory, and details are in the functions themselves; Main is a pertinent example of their functionality.  
+The final function, Line, outputs a final logical/binary image and a list of all lines in the image (Recorded and included in Image1 as ImOut.jpg and LineList.csv respectively).
 
 Key components to note: first, there is no built-in input for Main, the image to be processed is written in.  
 
@@ -21,9 +22,9 @@ Image1 folder contains the .mat file with all of the outputs of Main for the han
 
 Image2 folder contains some .jpg s of this algorithm applied to other photos.  
 
-The wiki tap contains images at each of the stages for easy viewing for the original image.  
+The wiki tab contains images at each of the stages, for the original image, for easy viewing.  
 
- %Main
+%Main
 %Editable values: threshold, itterations of expansion/thinning & pruning
 threshold = 130; %Sobel5 thresh 130, sobel3 thresh >20 <50, too long
 Error = true;
@@ -77,12 +78,12 @@ I have no solution to the current implementation of a user-inputted threshold.
 End of spring break, I tried to make a thinning algorithm. I researched a bit, to get a grasp of what there was. I found out the requirements to delete a pixel and tried to work with that.  
 I finally got it to work, but several things happened. 1) Hon Hon Physics got harder. 2) 3cr Thermo class just failed 2/3 of its students. With only 1/3 of the class left, survivors are buckling down for the passing C, cause there is no curve. 3) The code I wrote for thinning, I tried on a 16x16 square that I knew what it was supposed to thin to. That took 2.7 hours. On the 2500 x 2000 picture, that won't work.  
 Semester ended. The freshman rocket competition team, of which I did electronics, mechanisms, and programing, had the rocket fall from 3000 ft and thus end. Prof said first and foremost came my grades, and I agree- between physics and thermo I was packed- & had was very sick for week of finals & half week before that.  
-But! Now over with better than expected grades, I worked to convert the code to mex, the C-Matlab fun demon. After researching and writing enough to just create the padded image and having it repeatedly crash matlab, I realized that I've wasted all the time I spent for the last 1.5-2 months (minimal nonschoolwork) on this avenue of thinning.  
+But! Now over with better than expected grades, I worked to convert the code to mex, the C-Matlab fun demon. After researching and writing enough to just create the padded image and having it repeatedly crash Matlab, I realized that I've wasted all the time I spent for the last 1.5-2 months (minimal nonschoolwork) on this avenue of thinning.  
 I saw on Stack Overflow a reference to a 4x4 thinning algorithm by Zhang and Wang. I decided to implement it.  
-I comfort myself with the fact that I knew nothing about matlab at somepoint. For I spent all this time on thinning, and wrote ZhangWangThin in 2 days.  
+I comfort myself with the fact that I knew nothing about Matlab at somepoint. For I spent all this time on thinning, and wrote ZhangWangThin in 2 days.  
 I have some CV existentialism with the fact that I'm not using a template, and thus only minimally know what's accurate, I'm not quite sure what format to output this, if this is getting piped for a particular application there must be an easier way than my intermediary output, and I was supposed to finish ages ago... 
 I struggle with expansion. The expansion and thinning causes many false paths, because the expansion expands in places I know I don't want, but it does not. I scrap my directed expansion functions, as those could be a future improvement, a big one, but I need to end this, get the lines.  
 ZhangWangThin gets edited, modified, improved, and is the most optimized and longest function I have.  
 Line acquisition is painful, because of all of the false loops and bubbles by bad expansion. Somehow, though it took me awhile, I made a way to get what I wanted, all of the lines in the image, and the successful (I think) removal of many bad loops.  
 Clean up. Good enough. Format, readme, send to prof.  
-This could be better, could be quicker, could've been finished quicker as well. Regardless, I am thankful for this stimulating project on such an interesting topic. I went from having no knowledge of matlab to a much much stronger knowledge, to the point that I think I know Matlab language best now.  
+This could be better, could be quicker, could've been finished quicker as well. Regardless, I am thankful for this stimulating project on such an interesting topic. I went from having no knowledge of Matlab to a much much stronger knowledge, to the point that I think I know Matlab language best now.  
