@@ -12,7 +12,15 @@ Im2 = MedianFilter( Im, filterRegSide );
 %a constant matrix, based off of original data, for reference
 ImMag( ImMag < threshold ) = 0; %Points not removed from ImDir, more data
 %At this point, useless to continue to hold magnitude vals. Convert to BW
-Im3 = ZhangWangThin( logical( ImMag ), false, false );
+% --sparseDev Edits: Converting to Sparse here
+% -- Affected functions: ZhangWang, Expansion, SpurTipRemove, Line
+% --Also, in case it was not already so, all Ims should now be logical
+% -- ZhangWangThin had 1 change, 3 %'ed out b/c unsure if better
+% -- Expansion should be fine
+% -- SpurTipRemove should be fine
+% -- Line is mostly index manip, which is full mats of inds, a lil adjust
+Im2 = sparse(logical( ImMag ) );
+Im3 = ZhangWangThin( Im2, false, false );
 %Expansion & thinning, This section can benefit from improvements
 for i = 1: 4
     j=0;
