@@ -16,11 +16,10 @@ ImMag( ImMag < threshold ) = 0; %Points not removed from ImDir, more data
 % -- Affected functions: ZhangWang, Expansion, SpurTipRemove, Line
 % --Also, in case it was not already so, all Ims should now be logical
 % -- ZhangWangThin had 1 change, 3 %'ed out b/c unsure if better
-% -- Expansion should be fine
-% -- SpurTipRemove should be fine
+% -- Expansion fixed first: evidence of major rewriting
+% -- SpurTipRemove fixed
 % -- Line is mostly index manip, which is full mats of inds, a lil adjust
-Im2 = sparse(logical( ImMag ) );
-Im3 = ZhangWangThin( Im2, false, false );
+Im3 = ZhangWangThin( sparse(logical( ImMag ) ), false, false );
 %Expansion & thinning, This section can benefit from improvements
 for i = 1: 4
     j=0;

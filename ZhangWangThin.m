@@ -2,10 +2,10 @@ function [ OutMag ] = ZhangWangThin( InOfMag, isIterative, rmIsolated )
 %ZHANGWANGTHIN A thinning / skeletization algorithm by YY Zhang and PSP
 %Wang; input is matrix to thin, output is same, uint8; Assume binary uint8.
 seen = logical( InOfMag ); %toItt = .5;
-neighbors = ones( 3, 'single' ); neighbors(2,2) = 0; cont = true;
+neighbors = ones( 3, 'double' ); neighbors(2,2) = 0; cont = true;
 while( cont )
     %Rule 1,2: p is point and 2<=B(p)<=6
-    NeighborNo = conv2( single( seen ), neighbors, 'same').*single(seen);
+    NeighborNo = conv2( full(double( seen )), neighbors, 'same').*double(seen);
     %Neighbor rules, rm if 1 or 0 neighbors, or 7 or 8 (inside & end)
     NeighborNo(NeighborNo > 6) = 0; NeighborNo(NeighborNo < 2) = 0;
     NeighborNo(NeighborNo > 0 ) = 1; %NeighborNo has possible points toDelete

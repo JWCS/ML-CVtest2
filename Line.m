@@ -14,16 +14,17 @@ end
 function [ LineIDs, Lines, LinesM, NeighborNo ] = AcquireLines( seen, addJunctions )
 %Acquire unique lines into LineIDs
 %Everything full except NeighborNo, seen (ImOut)
-M = size( seen, 1 ); neighbors = ones(3, 'single'); neighbors(2, 2) = 0;
+M = size( seen, 1 ); neighbors = ones(3, 'double'); neighbors(2, 2) = 0;
 MatInd = bsxfun(@plus, (1:M)', (0:size(seen,2)-1)*M); %Keep NOT sparse
 for a = 1:2
     if a>1; seen = logical(NeighborNo); end;
-    NeighborNo = conv2( single(seen), neighbors, 'same' ) .* single(seen);
+    NeighborNo = conv2( full(double(seen)), neighbors, 'same' ) .* double(seen);
     LinePts = sparse(NeighborNo==2); %LinePts can totally be sparse
-    Lines = full((conv2(single(LinePts),neighbors, 'same') .*LinePts) ==1).*MatInd;
+    Lines = (full(conv2(full(double(LinePts)),neighbors, 'same') .*LinePts) ==1).*MatInd;
     LinePts = LinePts .* MatInd; LinePts(1:2, 1:2) = 0; %#ok<SPRIX>
-    Lines(Lines==0) = []; Lines = Lines'; i=1; cont = true;
-    NextPoints = conv2(single(LinePts),neighbors, 'same').*logical(LinePts);
+    Lines(Lines==0) = []; Lines = cat(2, Lines', zeros(numel(Lines), 2000));
+    NextPoints= conv2(full(double(LinePts)),neighbors,'same').*full(logical(LinePts));
+    i=1; cont = true;
     while cont %Lines has each line end, this loop adds pts to make whole line
         if i>1
             Lines(:,i+1) = NextPoints(Lines(:,i)) - LinePts(Lines(:,i-1));
@@ -34,7 +35,7 @@ for a = 1:2
         Lines( Lines<=0 ) = 1;
         i = i +1;
     end
-    if(issparse(Lines));error('Lines is Sparse');end;
+    Lines(Lines==1)=0; Lines= Lines(:,1: max(any(Lines).*(1:size(Lines, 2)) ));
     cont = true; i = 1;
     while cont %For everyline, there is a duplicate: this loop removes it
         for j = i+1:size(Lines, 1)
@@ -42,36 +43,37 @@ for a = 1:2
                     ==size(Lines,2); 
                 %If No of matches of Line i and Line >i are equal to
                 %members in Line >i, delete Line >i & itterate;!SPARSE
-                Lines(j,:)=[]; break;
+                Lines(j,:)=[]; 
+                break;
             end
         end
         i= i+1; cont = i<size(Lines,1);
     end; clear i j cont;
     LinesM = size(Lines,1); 
     CritsInd = (NeighborNo==1 | NeighborNo>2) .* MatInd;
-    Temp = conv2( single(CritsInd), neighbors, 'same'); 
+    Temp = conv2( full(double(CritsInd)), neighbors, 'same'); %Analyze Temp for boost
     LineIDs(:,1) = Temp(Lines(:,1)); Lines(Lines==1)=nan;
     LineIDs(:,3) = bsxfun(@minus, size(Lines,2), sum(isnan(Lines), 2));
     LineIDs(:,2)=Temp(Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')));
     if a==1
         NeighborNo(LineIDs(LineIDs(:,1)==LineIDs(:,2)))= ...
             NeighborNo(LineIDs(LineIDs(:,1)==LineIDs(:,2)))-2;
-        Temp = reshape(Lines(LineIDs(:,1)==LineIDs(:,2),:), [], 1);
+        Temp = reshape(Lines(LineIDs(:,1)==LineIDs(:,2),:), [], 1);%New Temp
         Temp(isnan(Temp))=[]; clear LineIDs;
         NeighborNo(Temp) = 0; %Removes loops with 1 crit point
-        for i = 1: 2
-            for j = 1:10
-                NeighborNo = SpurTipRemove( uint8(NeighborNo) );
-            end
-            NeighborNo = ZhangWangThin( NeighborNo, 0, 0 );
-        end %Not worried about Thin removing > 1-2 at a place: Mat,0,0
+%         for i = 1: 2
+%             for j = 1:10
+%                 NeighborNo = SpurTipRemove( uint8(NeighborNo) );
+%             end
+%             NeighborNo = ZhangWangThin( NeighborNo, 0, 0 );
+%         end %Not worried about Thin removing > 1-2 at a place: Mat,0,0
     end; 
     clear i j;
 end; clear a Temp;
 %Lines in LineIDs: Critical End 1, Crit End 2, No of pts inbetween(not inc)
 if addJunctions
     %Add junctions of splits as lines with 0 inbetween points
-    Temp = double(NeighborNo); Temp(Temp<3) = 0; Temp(Temp>2) = 1;
+    Temp = double(NeighborNo); Temp(Temp<3) = 0; Temp(Temp>2) = 1; %Analyze Temp
     Q = find( Temp ); Temp = Temp .* MatInd; Temp(:,end+1) = zeros( M, 1 ); j = 2;
     for i = [-M-1, -M, -M+1, -1, +1, M-1, M, M+1]
         %For each split, make a list of the points closest to it, and their angles
@@ -90,9 +92,6 @@ if addJunctions
     R(:,3) = 2*ones(size(R,1),1); LinesM = size( Lines, 1 );
     LineIDs( end +1 : end +size(R,1), 1:3 ) = R;
 end
-    if(issparse(Lines));error('Lines is Sparse');end;
-    if(issparse(LineIDs));error('LineIDs is Sparse');end;
-    if(~issparse(NeighborNo));error('NeighborNo isn''t Sparse');end;
 end
 
 function [LineIDsOut, LinesOut, ImOut ] = ...
@@ -101,10 +100,11 @@ function [LineIDsOut, LinesOut, ImOut ] = ...
 % This piece tried to delete all lines connected to a split if they
 % weren't the 2 most accurate / in line with the ImDir there
 % Lines/LineIDs,ImDir are full, ImOut & NeighborNo are sparse, keep it that
-M = size( NeighborNo, 1 );
-List = find(NeighborNo>2); N = size(NeighborNo,2);
+[M, N] = size( NeighborNo );
+List = find(NeighborNo>2);
     if(issparse(List));error('List is Sparse');end;
     
+%The following should all be full, as it is index manipulation, few 0's
 for a = 1:2
 ListInds = permute(cat(3, sort(bsxfun(@times,bsxfun(@eq,List,LineIDs(:,1)'),(1:LinesM)),...
     2,'descend'),sort(bsxfun(@times,bsxfun(@eq,List,LineIDs(:,2)'),1:LinesM),...
@@ -127,7 +127,6 @@ for i = 1:size(List,1)
     end
 end; clear i; %Assigns to List(:,2:5) the inds of the points near each split
 
-%The following should all be full, as it is index manipulation, few 0's
 List(List==0)=nan;
 [Temp(:,:,3),Temp(:,:,4)] = ind2sub([M,N],List(:,1));
 Temp = bsxfun(@times, Temp, ones(1,size(List,2)-1,1));
@@ -166,8 +165,11 @@ FinalPoints1 = Lines( sum(bsxfun(@eq, toKeepInds, (1:LinesM)'),2) >Tune, : );
 LinesOut = FinalPoints1;
 FinalPoints1( isnan(FinalPoints1) ) = [];
 LineIDsOut = LineIDs( sum(bsxfun(@eq, toKeepInds, (1:LinesM)'),2) >Tune, 1:2 );
-ImOut = spalloc( M, N, numel(FinalPoints1) + numel(LineIDsOut) );
-ImOut( FinalPoints1 ) = 1; ImOut( LineIDsOut ) = 1; ImOut=logical(ImOut);
+%ImOut = spalloc( M, N, numel(FinalPoints1) + numel(LineIDsOut) );
+%ImOut( FinalPoints1 ) = 1; ImOut( LineIDsOut ) = 1; ImOut=logical(ImOut);
+[I, J] = ind2sub( [M, N], ...
+    cat( 1, reshape( FinalPoints1, [], 1 ), reshape(LineIDsOut, [], 1) ));
+ImOut = sparse( I, J, ones(size(I)), M, N );
     if(issparse(LinesOut));error('LinesOut is Sparse');end;
     if(issparse(LineIDsOut));error('LineIDsOut is Sparse');end;
     if(~issparse(ImOut));error('ImOut is not Sparse');end;
@@ -189,49 +191,49 @@ end
 % global M; %ImOut is logical. LineIDs out gives Lines lengths in 3rd col
 % % This piece was assuming the correct lines pointed to each other. 
 % % Check by reference ImDir; Degrees are N over M, positively oriented.
-% A(:,1,1) = round( sind( single(ImDir( Lines(:,1) )) )); % Val along +N dir
-% A(:,2,1) = round( cosd( single(ImDir( Lines(:,1) )) )); % Val along +M dir
-% A(:,3,1) = round(sind(single(ImDir(Lines(:,1))+30)));
-% A(:,4,1) = round(cosd(single(ImDir(Lines(:,1))+30)));
-% A(:,5,1) = round(sind(single(ImDir(Lines(:,1))-30)));
-% A(:,6,1) = round(cosd(single(ImDir(Lines(:,1))-30)));
+% A(:,1,1) = round( sind( double(ImDir( Lines(:,1) )) )); % Val along +N dir
+% A(:,2,1) = round( cosd( double(ImDir( Lines(:,1) )) )); % Val along +M dir
+% A(:,3,1) = round(sind(double(ImDir(Lines(:,1))+30)));
+% A(:,4,1) = round(cosd(double(ImDir(Lines(:,1))+30)));
+% A(:,5,1) = round(sind(double(ImDir(Lines(:,1))-30)));
+% A(:,6,1) = round(cosd(double(ImDir(Lines(:,1))-30)));
 % A(:,7:12,1) = -1 * A(:,1:6,1); %Does the same, checking opp dir
 % A(:,13:18,1) = bsxfun(@plus, Lines(:,1), A(:,2:2:12,1) + M*A(:,1:2:11,1) );
 % A(:,19:24,1) = bsxfun( @eq, A(:,13:18,1), LineIDs(:,1) ); %Checks if Lines-> Crits
 % %Also checks now if Crits-> Lines for first points
-% A(:,1,2) = round( sind( single(ImDir( LineIDs(:,1) )) )); % Val along +N dir
-% A(:,2,2) = round( cosd( single(ImDir( LineIDs(:,1) )) )); % Val along +M dir
-% A(:,3,2) = round(sind(single(ImDir(LineIDs(:,1))+30)));
-% A(:,4,2) = round(cosd(single(ImDir(LineIDs(:,1))+30)));
-% A(:,5,2) = round(sind(single(ImDir(LineIDs(:,1))-30)));
-% A(:,6,2) = round(cosd(single(ImDir(LineIDs(:,1))-30)));
+% A(:,1,2) = round( sind( double(ImDir( LineIDs(:,1) )) )); % Val along +N dir
+% A(:,2,2) = round( cosd( double(ImDir( LineIDs(:,1) )) )); % Val along +M dir
+% A(:,3,2) = round(sind(double(ImDir(LineIDs(:,1))+30)));
+% A(:,4,2) = round(cosd(double(ImDir(LineIDs(:,1))+30)));
+% A(:,5,2) = round(sind(double(ImDir(LineIDs(:,1))-30)));
+% A(:,6,2) = round(cosd(double(ImDir(LineIDs(:,1))-30)));
 % A(:,7:12,2) = -1 * A(:,1:6,2); %Does the same, checking opp dir
 % A(:,13:18,2) = bsxfun(@plus, LineIDs(:,1), A(:,2:2:12,2) + M*A(:,1:2:11,2) );
 % A(:,19:24,2) = bsxfun( @eq, A(:,13:18,2), Lines(:,1) ); %Checks if Lines-> Crits
 % % Check now for the other end point for each line. 
-% A(:,1,3) = round( sind( single(ImDir( ...
+% A(:,1,3) = round( sind( double(ImDir( ...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
-% A(:,2,3) = round( cosd( single(ImDir( ...
+% A(:,2,3) = round( cosd( double(ImDir( ...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
-% A(:,3,3) = round(sind(single(ImDir(...
+% A(:,3,3) = round(sind(double(ImDir(...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
-% A(:,4,3) = round(cosd(single(ImDir(...
+% A(:,4,3) = round(cosd(double(ImDir(...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
-% A(:,5,3) = round(sind(single(ImDir(...
+% A(:,5,3) = round(sind(double(ImDir(...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
-% A(:,6,3) = round(cosd(single(ImDir(...
+% A(:,6,3) = round(cosd(double(ImDir(...
 %     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
 % A(:,7:12,3) = -1 * A(:,1:6,3); 
 % A(:,13:18,3) = bsxfun(@plus, Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, ...
 %     (1:LinesM)')), A(:,2:2:12,3) + M*A(:,1:2:11,3) );
 % A(:,19:24,3) = bsxfun( @eq, A(:,13:18,3), LineIDs(:,2) );
 % %Also checks now if Crits-> Lines for first points
-% A(:,1,4) = round( sind( single(ImDir( LineIDs(:,2) )) )); 
-% A(:,2,4) = round( cosd( single(ImDir( LineIDs(:,2) )) )); 
-% A(:,3,4) = round(sind(single(ImDir(LineIDs(:,2))+30)));
-% A(:,4,4) = round(cosd(single(ImDir(LineIDs(:,2))+30)));
-% A(:,5,4) = round(sind(single(ImDir(LineIDs(:,2))-30)));
-% A(:,6,4) = round(cosd(single(ImDir(LineIDs(:,2))-30)));
+% A(:,1,4) = round( sind( double(ImDir( LineIDs(:,2) )) )); 
+% A(:,2,4) = round( cosd( double(ImDir( LineIDs(:,2) )) )); 
+% A(:,3,4) = round(sind(double(ImDir(LineIDs(:,2))+30)));
+% A(:,4,4) = round(cosd(double(ImDir(LineIDs(:,2))+30)));
+% A(:,5,4) = round(sind(double(ImDir(LineIDs(:,2))-30)));
+% A(:,6,4) = round(cosd(double(ImDir(LineIDs(:,2))-30)));
 % A(:,7:12,4) = -1 * A(:,1:6,4); 
 % A(:,13:18,4) = bsxfun(@plus, LineIDs(:,2), A(:,2:2:12,4) + M*A(:,1:2:11,4) );
 % A(:,19:24,4) = bsxfun( @eq, A(:,13:18,4), ...

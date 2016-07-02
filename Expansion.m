@@ -1,8 +1,11 @@
 function [ OutMag ] = Expansion( InOfMag )
 %Expansion Expands all points in 8-connnectivity. Buffer is 'ones' 
 seen = logical( InOfMag );
-border = ~seen & conv2( single( seen ), ones(3, 'single' ), 'same' );
-OutMag = InOfMag; OutMag( border ) = 1;
+%A = conv2( full(double( seen )), ones(3, 'double' ), 'same' );
+%border = bsxfun(@and, ~full(seen), A);
+%OutMag = bsxfun(@or, seen, border);
+OutMag = bsxfun(@or, seen, bsxfun(@and, ~full(seen), ...
+            conv2( full(double( seen )), ones(3, 'double' ), 'same' ) ));
 %This is older code when I retained and expanded the magnitudes. 
 %   Except for some painful dual for loops, this gives each new surrounding
 %   element a value of the average of the ones around it. 
