@@ -35,14 +35,18 @@ for a = 1:2
     end
     cont = true; i = 1;
     while cont %For everyline, there is a duplicate: this loop removes it
-        for j = i+1:size(Lines, 1)
-            if sum(builtin('_ismemberhelper', Lines(i,:), sort(Lines(j,:))))...
-                    ==size(Lines,2);
-                Lines(j,:)=[]; break;
-            end
-        end
+        matches = sum(bsxfun(@eq, sort(Lines(i,:)), sort(Lines(i+1:end,:),2)),1)...
+                ==size(Lines,2);
+        matches = matches .* (i+1:i+size(matches,1)); matches(matches==0)=[];
+        Lines(matches,:) = [];
         i= i+1; cont = i<size(Lines,1);
-    end; clear i j cont;
+%         for j = i+1:size(Lines, 1)
+%             if sum(builtin('_ismemberhelper', Lines(i,:), sort(Lines(j,:))))...
+%                     ==size(Lines,2);
+%                 Lines(j,:)=[]; break;
+%             end
+%         end
+    end; clear i matches cont;
     LinesM = size(Lines,1); 
     CritsInd = (NeighborNo==1 | NeighborNo>2) .* MatInd;
     Temp = conv2( single(CritsInd), neighbors, 'same'); %
