@@ -13,16 +13,17 @@ end
 
 function [ LineIDs, Lines, LinesM, NeighborNo ] = AcquireLines( seen, addJunctions )
 %Acquire unique lines into LineIDs
-M = size( seen, 1 ); neighbors = ones(3, 'single'); neighbors(2, 2) = 0;
+M = size( seen, 1 ); neighbors = ones(3, 'double'); neighbors(2, 2) = 0;
 MatInd = bsxfun(@plus, (1:M)', (0:size(seen,2)-1)*M);
 for a = 1:2
     if a>1; seen = logical(NeighborNo); end;
-    NeighborNo = conv2( single(seen), neighbors, 'same' ) .* single(seen);
+    NeighborNo = conv2( double(seen), neighbors, 'same' ) .* double(seen);
     LinePts = (NeighborNo==2);
-    Lines = ((conv2(single(LinePts),neighbors, 'same') .*LinePts) ==1).*MatInd;
+    Lines = ((conv2(double(LinePts),neighbors, 'same') .*LinePts) ==1).*MatInd;
     LinePts = LinePts .* MatInd; LinePts(1:2, 1:2) = 0;
-    Lines(Lines==0) = []; Lines = Lines'; i=1; cont = true;
-    NextPoints = conv2(single(LinePts),neighbors, 'same').*logical(LinePts);
+    Lines(Lines==0) = []; Lines = cat(2, Lines', zeros(numel(Lines), 2000));
+    NextPoints = conv2(double(LinePts),neighbors, 'same').*logical(LinePts);
+    Lines = Lines'; i=1; cont = true;
     while cont %Lines has each line end, this loop adds pts to make whole line
         if i>1
             Lines(:,i+1) = NextPoints(Lines(:,i)) - LinePts(Lines(:,i-1));
@@ -33,6 +34,7 @@ for a = 1:2
         Lines( Lines<=0 ) = 1;
         i = i +1;
     end
+    Lines(Lines==1)=0; Lines= Lines(:,1: max(any(Lines).*(1:size(Lines, 2)) ));
     cont = true; i = 1;
     while cont %For everyline, there is a duplicate: this loop removes it
         matches = sum(bsxfun(@eq, sort(Lines(i,:)), sort(Lines(i+1:end,:),2)),1)...
@@ -49,7 +51,7 @@ for a = 1:2
     end; clear i matches cont;
     LinesM = size(Lines,1); 
     CritsInd = (NeighborNo==1 | NeighborNo>2) .* MatInd;
-    Temp = conv2( single(CritsInd), neighbors, 'same'); %
+    Temp = conv2( double(CritsInd), neighbors, 'same'); %
     LineIDs(:,1) = Temp(Lines(:,1)); Lines(Lines==1)=nan;
     LineIDs(:,3) = bsxfun(@minus, size(Lines,2), sum(isnan(Lines), 2));
     LineIDs(:,2)=Temp(Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')));
@@ -168,66 +170,3 @@ Temp = permute(any(bsxfun( @eq, permute(OutMat, [3,2,1]), ...
     permute(B, [2,3,1]) ),1), [3,2,1]);
 OutMat( Temp ) = -1.*OutMat( Temp );
 end
-
-% function [LineIDs, Lines, ImOut ] = ...
-%     Process1( Lines, LineIDs, LinesM, ImDir, NeighborNo)
-% global M; %ImOut is logical. LineIDs out gives Lines lengths in 3rd col
-% % This piece was assuming the correct lines pointed to each other. 
-% % Check by reference ImDir; Degrees are N over M, positively oriented.
-% A(:,1,1) = round( sind( single(ImDir( Lines(:,1) )) )); % Val along +N dir
-% A(:,2,1) = round( cosd( single(ImDir( Lines(:,1) )) )); % Val along +M dir
-% A(:,3,1) = round(sind(single(ImDir(Lines(:,1))+30)));
-% A(:,4,1) = round(cosd(single(ImDir(Lines(:,1))+30)));
-% A(:,5,1) = round(sind(single(ImDir(Lines(:,1))-30)));
-% A(:,6,1) = round(cosd(single(ImDir(Lines(:,1))-30)));
-% A(:,7:12,1) = -1 * A(:,1:6,1); %Does the same, checking opp dir
-% A(:,13:18,1) = bsxfun(@plus, Lines(:,1), A(:,2:2:12,1) + M*A(:,1:2:11,1) );
-% A(:,19:24,1) = bsxfun( @eq, A(:,13:18,1), LineIDs(:,1) ); %Checks if Lines-> Crits
-% %Also checks now if Crits-> Lines for first points
-% A(:,1,2) = round( sind( single(ImDir( LineIDs(:,1) )) )); % Val along +N dir
-% A(:,2,2) = round( cosd( single(ImDir( LineIDs(:,1) )) )); % Val along +M dir
-% A(:,3,2) = round(sind(single(ImDir(LineIDs(:,1))+30)));
-% A(:,4,2) = round(cosd(single(ImDir(LineIDs(:,1))+30)));
-% A(:,5,2) = round(sind(single(ImDir(LineIDs(:,1))-30)));
-% A(:,6,2) = round(cosd(single(ImDir(LineIDs(:,1))-30)));
-% A(:,7:12,2) = -1 * A(:,1:6,2); %Does the same, checking opp dir
-% A(:,13:18,2) = bsxfun(@plus, LineIDs(:,1), A(:,2:2:12,2) + M*A(:,1:2:11,2) );
-% A(:,19:24,2) = bsxfun( @eq, A(:,13:18,2), Lines(:,1) ); %Checks if Lines-> Crits
-% % Check now for the other end point for each line. 
-% A(:,1,3) = round( sind( single(ImDir( ...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
-% A(:,2,3) = round( cosd( single(ImDir( ...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
-% A(:,3,3) = round(sind(single(ImDir(...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
-% A(:,4,3) = round(cosd(single(ImDir(...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
-% A(:,5,3) = round(sind(single(ImDir(...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
-% A(:,6,3) = round(cosd(single(ImDir(...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
-% A(:,7:12,3) = -1 * A(:,1:6,3); 
-% A(:,13:18,3) = bsxfun(@plus, Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, ...
-%     (1:LinesM)')), A(:,2:2:12,3) + M*A(:,1:2:11,3) );
-% A(:,19:24,3) = bsxfun( @eq, A(:,13:18,3), LineIDs(:,2) );
-% %Also checks now if Crits-> Lines for first points
-% A(:,1,4) = round( sind( single(ImDir( LineIDs(:,2) )) )); 
-% A(:,2,4) = round( cosd( single(ImDir( LineIDs(:,2) )) )); 
-% A(:,3,4) = round(sind(single(ImDir(LineIDs(:,2))+30)));
-% A(:,4,4) = round(cosd(single(ImDir(LineIDs(:,2))+30)));
-% A(:,5,4) = round(sind(single(ImDir(LineIDs(:,2))-30)));
-% A(:,6,4) = round(cosd(single(ImDir(LineIDs(:,2))-30)));
-% A(:,7:12,4) = -1 * A(:,1:6,4); 
-% A(:,13:18,4) = bsxfun(@plus, LineIDs(:,2), A(:,2:2:12,4) + M*A(:,1:2:11,4) );
-% A(:,19:24,4) = bsxfun( @eq, A(:,13:18,4), ...
-%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) );
-% % Create final list of acceptable lines. 
-% B = ( any( A(:,19:24,1), 2) | any( A(:,19:24,2) ,2) ) | ...
-%     ( any( A(:,19:24,3), 2) | any( A(:,19:24,4) ,2) );
-% C = reshape(Lines(~B,:), [],1); C(isnan(C))=[];
-% NeighborNo( C ) = 0; Lines(~B,:) = []; LineIDs(~B,:) = []; 
-% TempLines = reshape(Lines, [], 1); TempLines(isnan(TempLines))=[];
-% ImOut = zeros(size(NeighborNo)); 
-% ImOut( reshape( LineIDs(:,1:2), [], 1 ) ) = 1; 
-% ImOut( TempLines ) = 1; ImOut=logical(ImOut);
-% end

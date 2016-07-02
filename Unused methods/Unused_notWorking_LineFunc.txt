@@ -1,0 +1,66 @@
+In the mk2 ML code for vision processing, the Line func acquired and connected lines in an image. Getting each 'line,' defined as all of the points with only 2 neighbors inbetween points with more than two neighbors (junction), was handled in the Acquire lines subfunc. Cleaning this up was a func which used the ImDir matrix, which came from the edge operator, to connect the right lines together. 
+This was a sample idea to connect the lines together, but it did not seem to work
+
+% function [LineIDs, Lines, ImOut ] = ...
+%     Process1( Lines, LineIDs, LinesM, ImDir, NeighborNo)
+% global M; %ImOut is logical. LineIDs out gives Lines lengths in 3rd col
+% % This piece was assuming the correct lines pointed to each other. 
+% % Check by reference ImDir; Degrees are N over M, positively oriented.
+% A(:,1,1) = round( sind( single(ImDir( Lines(:,1) )) )); % Val along +N dir
+% A(:,2,1) = round( cosd( single(ImDir( Lines(:,1) )) )); % Val along +M dir
+% A(:,3,1) = round(sind(single(ImDir(Lines(:,1))+30)));
+% A(:,4,1) = round(cosd(single(ImDir(Lines(:,1))+30)));
+% A(:,5,1) = round(sind(single(ImDir(Lines(:,1))-30)));
+% A(:,6,1) = round(cosd(single(ImDir(Lines(:,1))-30)));
+% A(:,7:12,1) = -1 * A(:,1:6,1); %Does the same, checking opp dir
+% A(:,13:18,1) = bsxfun(@plus, Lines(:,1), A(:,2:2:12,1) + M*A(:,1:2:11,1) );
+% A(:,19:24,1) = bsxfun( @eq, A(:,13:18,1), LineIDs(:,1) ); %Checks if Lines-> Crits
+% %Also checks now if Crits-> Lines for first points
+% A(:,1,2) = round( sind( single(ImDir( LineIDs(:,1) )) )); % Val along +N dir
+% A(:,2,2) = round( cosd( single(ImDir( LineIDs(:,1) )) )); % Val along +M dir
+% A(:,3,2) = round(sind(single(ImDir(LineIDs(:,1))+30)));
+% A(:,4,2) = round(cosd(single(ImDir(LineIDs(:,1))+30)));
+% A(:,5,2) = round(sind(single(ImDir(LineIDs(:,1))-30)));
+% A(:,6,2) = round(cosd(single(ImDir(LineIDs(:,1))-30)));
+% A(:,7:12,2) = -1 * A(:,1:6,2); %Does the same, checking opp dir
+% A(:,13:18,2) = bsxfun(@plus, LineIDs(:,1), A(:,2:2:12,2) + M*A(:,1:2:11,2) );
+% A(:,19:24,2) = bsxfun( @eq, A(:,13:18,2), Lines(:,1) ); %Checks if Lines-> Crits
+% % Check now for the other end point for each line. 
+% A(:,1,3) = round( sind( single(ImDir( ...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
+% A(:,2,3) = round( cosd( single(ImDir( ...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) )) ));
+% A(:,3,3) = round(sind(single(ImDir(...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
+% A(:,4,3) = round(cosd(single(ImDir(...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) + 30)));
+% A(:,5,3) = round(sind(single(ImDir(...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
+% A(:,6,3) = round(cosd(single(ImDir(...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)'))) - 30)));
+% A(:,7:12,3) = -1 * A(:,1:6,3); 
+% A(:,13:18,3) = bsxfun(@plus, Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, ...
+%     (1:LinesM)')), A(:,2:2:12,3) + M*A(:,1:2:11,3) );
+% A(:,19:24,3) = bsxfun( @eq, A(:,13:18,3), LineIDs(:,2) );
+% %Also checks now if Crits-> Lines for first points
+% A(:,1,4) = round( sind( single(ImDir( LineIDs(:,2) )) )); 
+% A(:,2,4) = round( cosd( single(ImDir( LineIDs(:,2) )) )); 
+% A(:,3,4) = round(sind(single(ImDir(LineIDs(:,2))+30)));
+% A(:,4,4) = round(cosd(single(ImDir(LineIDs(:,2))+30)));
+% A(:,5,4) = round(sind(single(ImDir(LineIDs(:,2))-30)));
+% A(:,6,4) = round(cosd(single(ImDir(LineIDs(:,2))-30)));
+% A(:,7:12,4) = -1 * A(:,1:6,4); 
+% A(:,13:18,4) = bsxfun(@plus, LineIDs(:,2), A(:,2:2:12,4) + M*A(:,1:2:11,4) );
+% A(:,19:24,4) = bsxfun( @eq, A(:,13:18,4), ...
+%     Lines(bsxfun(@plus,(LineIDs(:,3)-1)*LinesM, (1:LinesM)')) );
+% % Create final list of acceptable lines. 
+% B = ( any( A(:,19:24,1), 2) | any( A(:,19:24,2) ,2) ) | ...
+%     ( any( A(:,19:24,3), 2) | any( A(:,19:24,4) ,2) );
+% C = reshape(Lines(~B,:), [],1); C(isnan(C))=[];
+% NeighborNo( C ) = 0; Lines(~B,:) = []; LineIDs(~B,:) = []; 
+% TempLines = reshape(Lines, [], 1); TempLines(isnan(TempLines))=[];
+% ImOut = zeros(size(NeighborNo)); 
+% ImOut( reshape( LineIDs(:,1:2), [], 1 ) ) = 1; 
+% ImOut( TempLines ) = 1; ImOut=logical(ImOut);
+% end
+
